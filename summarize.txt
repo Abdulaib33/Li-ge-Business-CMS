@@ -1,0 +1,4179 @@
+.env :
+
+APP_NAME=Laravel
+APP_ENV=local
+APP_KEY=base64:H0m67LYq2nxjIh+j3PpTx+6hZ5mcisJJN5r133S7tOI=
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+# APP_MAINTENANCE_STORE=database
+
+# PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=liege_business_cms
+DB_USERNAME=root
+DB_PASSWORD=becode
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+# CACHE_PREFIX=
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=log
+MAIL_SCHEME=null
+MAIL_HOST=127.0.0.1
+MAIL_PORT=2525
+MAIL_USERNAME=Abdoulaye
+MAIL_PASSWORD=1@2bc3D4
+MAIL_FROM_ADDRESS="Abdulaibayo09@gmail.com"
+MAIL_FROM_NAME="Business Website"
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+VITE_APP_NAME="${APP_NAME}"
+
+
+
+
+app/Http/Controllers/Admin/DashboardController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ContactMessage;
+use App\Models\Post;
+use App\Models\Service;
+use Illuminate\Http\Request;
+
+class DashboardController extends Controller
+{
+    public function index(Request $request)
+    {
+        return view('admin.dashboard', [
+            'stats' => [
+                'services' => Service::count(),
+                'posts' => Post::count(),
+                'messages' => ContactMessage::count(),
+            ],
+        ]);
+    }
+}
+
+
+app/Http/Controllers/Admin/MessageController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ContactMessage;
+
+class MessageController extends Controller
+{
+    public function index()
+    {
+        $messages = ContactMessage::orderByDesc('created_at')->paginate(20);
+
+        return view('admin.messages.index', compact('messages'));
+    }
+
+    public function show(ContactMessage $contactMessage)
+    {
+        return view('admin.messages.show', compact('contactMessage'));
+    }
+
+    public function destroy(ContactMessage $contactMessage)
+    {
+        $contactMessage->delete();
+
+        return redirect()
+            ->route('admin.messages.index')
+            ->with('status', 'Message deleted.');
+    }
+}
+
+
+
+app/Http/Controllers/Admin/PageController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Http\Requests\Admin\UpdatePageRequest;
+use App\Models\Page;
+
+class PageController extends Controller
+{
+    public function index()
+    {
+        return view('admin.pages.index', [
+            'pages' => Page::orderBy('key')->get(),
+        ]);
+    }
+
+    public function edit(Page $page)
+    {
+        return view('admin.pages.edit', [
+            'page' => $page,
+        ]);
+    }
+
+    public function update(UpdatePageRequest $request, Page $page)
+    {
+        $page->update($request->validated());
+
+        return redirect()
+            ->route('admin.pages.index')
+            ->with('status', 'Page updated successfully.');
+    }
+}
+
+
+app/Http/Controllers/Admin/PostController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StorePostRequest;
+use App\Http\Requests\Admin\UpdatePostRequest;
+use App\Models\Post;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+class PostController extends Controller
+{
+    public function index()
+    {
+        $posts = Post::orderByDesc('created_at')->paginate(15);
+
+        return view('admin.posts.index', compact('posts'));
+    }
+
+    public function create()
+    {
+        return view('admin.posts.create');
+    }
+
+    public function store(StorePostRequest $request)
+    {
+        $data = $request->validated();
+
+        // Slug: generate if empty
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['title']);
+        }
+
+        // Ensure slug unique (simple approach)
+        $baseSlug = $data['slug'];
+        $i = 2;
+        while (Post::where('slug', $data['slug'])->exists()) {
+            $data['slug'] = $baseSlug.'-'.$i;
+            $i++;
+        }
+
+        // Image upload
+        if ($request->hasFile('cover_image')) {
+            $data['cover_image_path'] = $request->file('cover_image')->store('posts', 'public');
+        }
+
+        Post::create($data);
+
+        return redirect()
+            ->route('admin.posts.index')
+            ->with('status', 'Post created.');
+    }
+
+    public function edit(Post $post)
+    {
+        return view('admin.posts.edit', compact('post'));
+    }
+
+    public function update(UpdatePostRequest $request, Post $post)
+    {
+        $data = $request->validated();
+
+        // Slug: generate if empty
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['title']);
+        }
+
+        // Ensure slug unique excluding current
+        $baseSlug = $data['slug'];
+        $i = 2;
+        while (Post::where('slug', $data['slug'])->where('id', '!=', $post->id)->exists()) {
+            $data['slug'] = $baseSlug.'-'.$i;
+            $i++;
+        }
+
+        // Image upload (replace old)
+        if ($request->hasFile('cover_image')) {
+            if ($post->cover_image_path) {
+                Storage::disk('public')->delete($post->cover_image_path);
+            }
+            $data['cover_image_path'] = $request->file('cover_image')->store('posts', 'public');
+        }
+
+        $post->update($data);
+
+        return redirect()
+            ->route('admin.posts.index')
+            ->with('status', 'Post updated.');
+    }
+
+    public function destroy(Post $post)
+    {
+        if ($post->cover_image_path) {
+            Storage::disk('public')->delete($post->cover_image_path);
+        }
+
+        $post->delete();
+
+        return redirect()
+            ->route('admin.posts.index')
+            ->with('status', 'Post deleted.');
+    }
+}
+
+
+app/Http/Controllers/Admin/ServiceController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreServiceRequest;
+use App\Http\Requests\Admin\UpdateServiceRequest;
+use App\Models\Service;
+
+class ServiceController extends Controller
+{
+    public function index()
+    {
+        $services = Service::orderBy('sort_order')
+            ->orderBy('id')
+            ->paginate(15);
+
+        return view('admin.services.index', compact('services'));
+    }
+
+    public function create()
+    {
+        return view('admin.services.create');
+    }
+
+    public function store(StoreServiceRequest $request)
+    {
+        Service::create($request->validated());
+
+        return redirect()
+            ->route('admin.services.index')
+            ->with('status', 'Service created.');
+    }
+
+    public function edit(Service $service)
+    {
+        return view('admin.services.edit', compact('service'));
+    }
+
+    public function update(UpdateServiceRequest $request, Service $service)
+    {
+        $service->update($request->validated());
+
+        return redirect()
+            ->route('admin.services.index')
+            ->with('status', 'Service updated.');
+    }
+
+    public function destroy(Service $service)
+    {
+        $service->delete();
+
+        return redirect()
+            ->route('admin.services.index')
+            ->with('status', 'Service deleted.');
+    }
+}
+
+
+
+
+app/Http/Controllers/Admin/SettingController.php :
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateSettingsRequest;
+use App\Models\Setting;
+use Illuminate\Support\Facades\Storage;
+
+class SettingController extends Controller
+{
+    public function edit()
+    {
+        return view('admin.settings.edit', [
+            'settings' => [
+                'business_name' => Setting::getValue('business_name', 'My Business'),
+                'phone' => Setting::getValue('phone'),
+                'email' => Setting::getValue('email'),
+                'address' => Setting::getValue('address'),
+                'logo_path' => Setting::getValue('logo_path'),
+            ],
+        ]);
+    }
+
+    public function update(UpdateSettingsRequest $request)
+    {
+        $data = $request->validated();
+
+        Setting::setValue('business_name', $data['business_name'] ?? '');
+        Setting::setValue('phone', $data['phone'] ?? '');
+        Setting::setValue('email', $data['email'] ?? '');
+        Setting::setValue('address', $data['address'] ?? '');
+
+        // Logo upload
+        if ($request->hasFile('logo')) {
+            // delete old
+            $old = Setting::getValue('logo_path');
+            if ($old) {
+                Storage::disk('public')->delete($old);
+            }
+
+            $path = $request->file('logo')->store('settings', 'public');
+            Setting::setValue('logo_path', $path);
+        }
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->with('status', 'Settings updated.');
+    }
+}
+
+
+
+
+app/Http/Controllers/Public/ContactController.php :
+
+<?php
+
+namespace App\Http\Controllers\Public;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Public\StoreContactMessageRequest;
+use App\Mail\ContactMessageReceived;
+use App\Models\ContactMessage;
+use Illuminate\Support\Facades\Mail;
+
+class ContactController extends Controller
+{
+    public function show()
+    {
+        return view('public.contact');
+    }
+
+    public function submit(StoreContactMessageRequest $request)
+    {
+        $contactMessage = ContactMessage::create($request->validated());
+
+        // $to = config('app.business_contact_email');
+        $to = config('business.contact_email');
+
+        if ($to) {
+            Mail::to($to)->send(new ContactMessageReceived($contactMessage));
+        }
+
+        return redirect()
+            ->route('contact.show')
+            ->with('status', 'Message sent. We will contact you soon.');
+    }
+}
+
+
+
+
+app/Http/Controllers/Public/PageController.php :
+
+<?php
+
+namespace App\Http\Controllers\Public;
+
+use App\Http\Controllers\Controller;
+use App\Models\Page;
+use Illuminate\Http\Request;
+
+class PageController extends Controller
+{
+    public function show(string $key)
+    {
+        $page = Page::published()->where('key', $key)->firstOrFail();
+
+        return view('public.page', [
+            'page' => $page,
+        ]);
+    }
+}
+
+
+
+app/Http/Controllers/Public/PostController.php :
+
+<?php
+
+namespace App\Http\Controllers\Public;
+
+use App\Http\Controllers\Controller;
+use App\Models\Post;
+
+class PostController extends Controller
+{
+    public function index()
+    {
+        return view('public.posts.index', [
+            'posts' => Post::published()->paginate(10),
+        ]);
+    }
+
+    public function show(string $slug)
+    {
+        $post = Post::published()->where('slug', $slug)->firstOrFail();
+
+        return view('public.posts.show', [
+            'post' => $post,
+        ]);
+    }
+}
+
+
+
+
+app/Http/Controllers/Public/ServiceController.php :
+
+<?php
+
+namespace App\Http\Controllers\Public;
+
+use App\Http\Controllers\Controller;
+use App\Models\Service;
+
+class ServiceController extends Controller
+{
+    public function index()
+    {
+        return view('public.services', [
+            'services' => Service::published()->get(),
+        ]);
+    }
+}
+
+
+
+
+app/Http/Controllers/Controller.php :
+
+<?php
+
+namespace App\Http\Controllers;
+
+abstract class Controller
+{
+    //
+}
+
+
+
+
+app/Http/Controllers/ProfileController.php :
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\ProfileUpdateRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\View\View;
+
+class ProfileController extends Controller
+{
+    /**
+     * Display the user's profile form.
+     */
+    public function edit(Request $request): View
+    {
+        return view('profile.edit', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
+     * Update the user's profile information.
+     */
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated());
+
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+
+        $request->user()->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    /**
+     * Delete the user's account.
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::to('/');
+    }
+}
+
+
+
+
+
+app/Http/Middleware/EnsureAdmin.php :
+
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+
+class EnsureAdmin
+{
+    public function handle(Request $request, Closure $next)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->is_admin) {
+            abort(403);
+        }
+
+        return $next($request);
+    }
+}
+
+
+
+
+app/Http/Requests/Admin/StorePostRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StorePostRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255'],
+            'excerpt' => ['nullable', 'string'],
+            'body' => ['nullable', 'string'],
+
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:160'],
+
+            // HTML datetime-local: we’ll store as timestamp
+            'published_at' => ['nullable', 'date'],
+            'is_published' => ['required', 'boolean'],
+
+            'cover_image' => ['nullable', 'image', 'max:2048'], // 2MB
+        ];
+    }
+}
+
+
+
+app/Http/Requests/Admin/StoreServiceRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreServiceRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true; // admin middleware already protects
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'price_text' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'is_published' => ['required', 'boolean'],
+        ];
+    }
+}
+
+
+
+app/Http/Requests/Admin/UpdatePageRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdatePageRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        // Admin access already enforced by middleware
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'body' => ['nullable', 'string'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:160'],
+            'is_published' => ['required', 'boolean'],
+        ];
+    }
+}
+
+
+
+
+app/Http/Requests/Admin/UpdatePostRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdatePostRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255'],
+            'excerpt' => ['nullable', 'string'],
+            'body' => ['nullable', 'string'],
+
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:160'],
+
+            'published_at' => ['nullable', 'date'],
+            'is_published' => ['required', 'boolean'],
+
+            'cover_image' => ['nullable', 'image', 'max:2048'],
+        ];
+    }
+}
+
+
+
+app/Http/Requests/Admin/UpdateServiceRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateServiceRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'price_text' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'is_published' => ['required', 'boolean'],
+        ];
+    }
+}
+
+
+
+app/Http/Requests/Admin/UpdateSettingsRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateSettingsRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'business_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'logo' => ['nullable', 'image', 'max:2048'],
+        ];
+    }
+}
+
+
+
+
+app/Http/Requests/Auth/LoginRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Auth;
+
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class LoginRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'email' => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ];
+    }
+
+    /**
+     * Attempt to authenticate the request's credentials.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function authenticate(): void
+    {
+        $this->ensureIsNotRateLimited();
+
+        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
+
+        RateLimiter::clear($this->throttleKey());
+    }
+
+    /**
+     * Ensure the login request is not rate limited.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function ensureIsNotRateLimited(): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            return;
+        }
+
+        event(new Lockout($this));
+
+        $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => trans('auth.throttle', [
+                'seconds' => $seconds,
+                'minutes' => ceil($seconds / 60),
+            ]),
+        ]);
+    }
+
+    /**
+     * Get the rate limiting throttle key for the request.
+     */
+    public function throttleKey(): string
+    {
+        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+}
+
+
+
+app/Http/Requests/Public/StoreContactMessageRequest.php :
+
+<?php
+
+namespace App\Http\Requests\Public;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreContactMessageRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'message' => ['required', 'string', 'max:5000'],
+        ];
+    }
+}
+
+
+
+
+app/Http/Requests/ProfileUpdateRequest.php :
+
+<?php
+
+namespace App\Http\Requests;
+
+use App\Models\User;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class ProfileUpdateRequest extends FormRequest
+{
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                Rule::unique(User::class)->ignore($this->user()->id),
+            ],
+        ];
+    }
+}
+
+
+
+
+app/Mail/ContactMessageReceived.php :
+
+<?php
+
+namespace App\Mail;
+
+use App\Models\ContactMessage;
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+
+class ContactMessageReceived extends Mailable
+{
+    use Queueable, SerializesModels;
+
+    public function __construct(public ContactMessage $contactMessage)
+    {
+    }
+
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: 'New contact message: '.$this->contactMessage->name
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            markdown: 'emails.contact.received',
+            with: [
+                'msg' => $this->contactMessage,
+            ]
+        );
+    }
+}
+
+
+
+app/Models/ContactMessage.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class ContactMessage extends Model
+{
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'message',
+    ];
+}
+
+
+app/Models/Page.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Page extends Model
+{
+    protected $fillable = [
+        'key',
+        'title',
+        'body',
+        'meta_title',
+        'meta_description',
+        'is_published',
+    ];
+
+    protected $casts = [
+        'is_published' => 'boolean',
+    ];
+
+    // Scope: only published pages
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true);
+    }
+}
+
+
+
+app/Models/Post.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+//use Illuminate\Support\Str;
+
+class Post extends Model
+{
+    protected $fillable = [
+        'title',
+        'slug',
+        'excerpt',
+        'body',
+        'cover_image_path',
+        'meta_title',
+        'meta_description',
+        'published_at',
+        'is_published',
+    ];
+
+    protected $casts = [
+        'is_published' => 'boolean',
+        'published_at' => 'datetime',
+    ];
+
+    // Automatically create slug if empty
+    // protected static function booted()
+    // {
+    //     static::saving(function ($post) {
+    //         if (empty($post->slug)) {
+    //             $post->slug = Str::slug($post->title);
+    //         }
+    //     });
+    // }
+
+    // Scope: published posts
+    public function scopePublished($query)
+    {
+        return $query
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                  ->orWhere('published_at', '<=', now());
+            })
+            ->orderByDesc('published_at');
+    }
+}
+
+
+
+
+app/Models/Service.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Service extends Model
+{
+    protected $fillable = [
+        'title',
+        'description',
+        'price_text',
+        'sort_order',
+        'is_published',
+    ];
+
+    protected $casts = [
+        'is_published' => 'boolean',
+    ];
+
+    // Scope: published services ordered
+    public function scopePublished($query)
+    {
+        return $query
+            ->where('is_published', true)
+            ->orderBy('sort_order');
+    }
+}
+
+
+
+
+app/Models/Setting.php :
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Setting extends Model
+{
+    protected $fillable = [
+        'key',
+        'value',
+    ];
+
+    // Helper: get setting value easily
+    public static function getValue($key, $default = null)
+    {
+        return static::where('key', $key)->value('value') ?? $default;
+    }
+
+    // Helper: set value
+    public static function setValue($key, $value)
+    {
+        static::updateOrCreate(
+            ['key' => $key],
+            ['value' => $value]
+        );
+    }
+}
+
+
+
+
+app/Models/User.php :
+
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'is_admin'
+    ];
+
+    // protected $casts = [
+    // 'email_verified_at' => 'datetime',
+    // 'password' => 'hashed',
+    // 'is_admin' => 'boolean',
+    // ];
+
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_admin' => 'boolean',
+        ];
+    }
+}
+
+
+
+app/Providers/AppServiceProvider.php :
+
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        //
+    }
+}
+
+
+
+
+
+app/View/Components/AppLayout.php :
+
+<?php
+
+namespace App\View\Components;
+
+use Illuminate\View\Component;
+use Illuminate\View\View;
+
+class AppLayout extends Component
+{
+    /**
+     * Get the view / contents that represents the component.
+     */
+    public function render(): View
+    {
+        return view('layouts.app');
+    }
+}
+
+
+
+app/View/Components/GuestLayout.php :
+
+<?php
+
+namespace App\View\Components;
+
+use Illuminate\View\Component;
+use Illuminate\View\View;
+
+class GuestLayout extends Component
+{
+    /**
+     * Get the view / contents that represents the component.
+     */
+    public function render(): View
+    {
+        return view('layouts.guest');
+    }
+}
+
+
+
+bootstrap/app.php :
+
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\EnsureAdmin::class,
+        ]);
+    })
+    ->withExceptions(function (Exceptions $exceptions) {
+        //
+    })
+    ->create();
+
+
+
+bootstrap/providers.php :
+
+<?php
+
+return [
+    App\Providers\AppServiceProvider::class,
+];
+
+
+
+config/app.php :
+
+<?php
+
+return [
+
+    // 'business_contact_email' => env('BUSINESS_CONTACT_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Name
+    |--------------------------------------------------------------------------
+    |
+    | This value is the name of your application, which will be used when the
+    | framework needs to place the application's name in a notification or
+    | other UI elements where an application name needs to be displayed.
+    |
+    */
+
+    'name' => env('APP_NAME', 'Laravel'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Environment
+    |--------------------------------------------------------------------------
+    |
+    | This value determines the "environment" your application is currently
+    | running in. This may determine how you prefer to configure various
+    | services the application utilizes. Set this in your ".env" file.
+    |
+    */
+
+    'env' => env('APP_ENV', 'production'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Debug Mode
+    |--------------------------------------------------------------------------
+    |
+    | When your application is in debug mode, detailed error messages with
+    | stack traces will be shown on every error that occurs within your
+    | application. If disabled, a simple generic error page is shown.
+    |
+    */
+
+    'debug' => (bool) env('APP_DEBUG', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application URL
+    |--------------------------------------------------------------------------
+    |
+    | This URL is used by the console to properly generate URLs when using
+    | the Artisan command line tool. You should set this to the root of
+    | the application so that it's available within Artisan commands.
+    |
+    */
+
+    'url' => env('APP_URL', 'http://localhost'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the default timezone for your application, which
+    | will be used by the PHP date and date-time functions. The timezone
+    | is set to "UTC" by default as it is suitable for most use cases.
+    |
+    */
+
+    'timezone' => 'UTC',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Locale Configuration
+    |--------------------------------------------------------------------------
+    |
+    | The application locale determines the default locale that will be used
+    | by Laravel's translation / localization methods. This option can be
+    | set to any locale for which you plan to have translation strings.
+    |
+    */
+
+    'locale' => env('APP_LOCALE', 'en'),
+
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+
+    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Encryption Key
+    |--------------------------------------------------------------------------
+    |
+    | This key is utilized by Laravel's encryption services and should be set
+    | to a random, 32 character string to ensure that all encrypted values
+    | are secure. You should do this prior to deploying the application.
+    |
+    */
+
+    'cipher' => 'AES-256-CBC',
+
+    'key' => env('APP_KEY'),
+
+    'previous_keys' => [
+        ...array_filter(
+            explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maintenance Mode Driver
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine the driver used to determine and
+    | manage Laravel's "maintenance mode" status. The "cache" driver will
+    | allow maintenance mode to be controlled across multiple machines.
+    |
+    | Supported drivers: "file", "cache"
+    |
+    */
+
+    'maintenance' => [
+        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
+        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+    ],
+
+];
+
+
+
+
+
+config/auth.php :
+
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Defaults
+    |--------------------------------------------------------------------------
+    |
+    | This option defines the default authentication "guard" and password
+    | reset "broker" for your application. You may change these values
+    | as required, but they're a perfect start for most applications.
+    |
+    */
+
+    'defaults' => [
+        'guard' => env('AUTH_GUARD', 'web'),
+        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Guards
+    |--------------------------------------------------------------------------
+    |
+    | Next, you may define every authentication guard for your application.
+    | Of course, a great default configuration has been defined for you
+    | which utilizes session storage plus the Eloquent user provider.
+    |
+    | All authentication guards have a user provider, which defines how the
+    | users are actually retrieved out of your database or other storage
+    | system used by the application. Typically, Eloquent is utilized.
+    |
+    | Supported: "session"
+    |
+    */
+
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | User Providers
+    |--------------------------------------------------------------------------
+    |
+    | All authentication guards have a user provider, which defines how the
+    | users are actually retrieved out of your database or other storage
+    | system used by the application. Typically, Eloquent is utilized.
+    |
+    | If you have multiple user tables or models you may configure multiple
+    | providers to represent the model / table. These providers may then
+    | be assigned to any extra authentication guards you have defined.
+    |
+    | Supported: "database", "eloquent"
+    |
+    */
+
+    'providers' => [
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+
+        // 'users' => [
+        //     'driver' => 'database',
+        //     'table' => 'users',
+        // ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Resetting Passwords
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options specify the behavior of Laravel's password
+    | reset functionality, including the table utilized for token storage
+    | and the user provider that is invoked to actually retrieve users.
+    |
+    | The expiry time is the number of minutes that each reset token will be
+    | considered valid. This security feature keeps tokens short-lived so
+    | they have less time to be guessed. You may change this as needed.
+    |
+    | The throttle setting is the number of seconds a user must wait before
+    | generating more password reset tokens. This prevents the user from
+    | quickly generating a very large amount of password reset tokens.
+    |
+    */
+
+    'passwords' => [
+        'users' => [
+            'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Password Confirmation Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Here you may define the number of seconds before a password confirmation
+    | window expires and users are asked to re-enter their password via the
+    | confirmation screen. By default, the timeout lasts for three hours.
+    |
+    */
+
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+];
+
+
+
+config/business.php :
+
+<?php
+
+return [
+    'contact_email' => env('BUSINESS_CONTACT_EMAIL'),
+];
+
+
+
+config/cache.php :
+
+<?php
+
+use Illuminate\Support\Str;
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Cache Store
+    |--------------------------------------------------------------------------
+    |
+    | This option controls the default cache store that will be used by the
+    | framework. This connection is utilized if another isn't explicitly
+    | specified when running a cache operation inside the application.
+    |
+    */
+
+    'default' => env('CACHE_STORE', 'database'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Stores
+    |--------------------------------------------------------------------------
+    |
+    | Here you may define all of the cache "stores" for your application as
+    | well as their drivers. You may even define multiple stores for the
+    | same cache driver to group types of items stored in your caches.
+    |
+    | Supported drivers: "array", "database", "file", "memcached",
+    |                    "redis", "dynamodb", "octane",
+    |                    "failover", "null"
+    |
+    */
+
+    'stores' => [
+
+        'array' => [
+            'driver' => 'array',
+            'serialize' => false,
+        ],
+
+        'database' => [
+            'driver' => 'database',
+            'connection' => env('DB_CACHE_CONNECTION'),
+            'table' => env('DB_CACHE_TABLE', 'cache'),
+            'lock_connection' => env('DB_CACHE_LOCK_CONNECTION'),
+            'lock_table' => env('DB_CACHE_LOCK_TABLE'),
+        ],
+
+        'file' => [
+            'driver' => 'file',
+            'path' => storage_path('framework/cache/data'),
+            'lock_path' => storage_path('framework/cache/data'),
+        ],
+
+        'memcached' => [
+            'driver' => 'memcached',
+            'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
+            'sasl' => [
+                env('MEMCACHED_USERNAME'),
+                env('MEMCACHED_PASSWORD'),
+            ],
+            'options' => [
+                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
+            ],
+            'servers' => [
+                [
+                    'host' => env('MEMCACHED_HOST', '127.0.0.1'),
+                    'port' => env('MEMCACHED_PORT', 11211),
+                    'weight' => 100,
+                ],
+            ],
+        ],
+
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
+        ],
+
+        'dynamodb' => [
+            'driver' => 'dynamodb',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'table' => env('DYNAMODB_CACHE_TABLE', 'cache'),
+            'endpoint' => env('DYNAMODB_ENDPOINT'),
+        ],
+
+        'octane' => [
+            'driver' => 'octane',
+        ],
+
+        'failover' => [
+            'driver' => 'failover',
+            'stores' => [
+                'database',
+                'array',
+            ],
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Key Prefix
+    |--------------------------------------------------------------------------
+    |
+    | When utilizing the APC, database, memcached, Redis, and DynamoDB cache
+    | stores, there might be other applications using the same cache. For
+    | that reason, you may prefix every cache key to avoid collisions.
+    |
+    */
+
+    'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
+
+];
+
+
+
+config/database.php :
+
+<?php
+
+use Illuminate\Support\Str;
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Database Connection Name
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify which of the database connections below you wish
+    | to use as your default connection for database operations. This is
+    | the connection which will be utilized unless another connection
+    | is explicitly specified when you execute a query / statement.
+    |
+    */
+
+    'default' => env('DB_CONNECTION', 'sqlite'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Database Connections
+    |--------------------------------------------------------------------------
+    |
+    | Below are all of the database connections defined for your application.
+    | An example configuration is provided for each database system which
+    | is supported by Laravel. You're free to add / remove connections.
+    |
+    */
+
+    'connections' => [
+
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'url' => env('DB_URL'),
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+            'transaction_mode' => 'DEFERRED',
+        ],
+
+        'mysql' => [
+            'driver' => 'mysql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'mariadb' => [
+            'driver' => 'mariadb',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'pgsql' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        'sqlsrv' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', 'localhost'),
+            'port' => env('DB_PORT', '1433'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Migration Repository Table
+    |--------------------------------------------------------------------------
+    |
+    | This table keeps track of all the migrations that have already run for
+    | your application. Using this information, we can determine which of
+    | the migrations on disk haven't actually been run on the database.
+    |
+    */
+
+    'migrations' => [
+        'table' => 'migrations',
+        'update_date_on_publish' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Redis Databases
+    |--------------------------------------------------------------------------
+    |
+    | Redis is an open source, fast, and advanced key-value store that also
+    | provides a richer body of commands than a typical key-value system
+    | such as Memcached. You may define your connection settings here.
+    |
+    */
+
+    'redis' => [
+
+        'client' => env('REDIS_CLIENT', 'phpredis'),
+
+        'options' => [
+            'cluster' => env('REDIS_CLUSTER', 'redis'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'persistent' => env('REDIS_PERSISTENT', false),
+        ],
+
+        'default' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_DB', '0'),
+            'max_retries' => env('REDIS_MAX_RETRIES', 3),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+        ],
+
+        'cache' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_CACHE_DB', '1'),
+            'max_retries' => env('REDIS_MAX_RETRIES', 3),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+        ],
+
+    ],
+
+];
+
+
+
+config/filesystems.php :
+
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Filesystem Disk
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the default filesystem disk that should be used
+    | by the framework. The "local" disk, as well as a variety of cloud
+    | based disks are available to your application for file storage.
+    |
+    */
+
+    'default' => env('FILESYSTEM_DISK', 'local'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filesystem Disks
+    |--------------------------------------------------------------------------
+    |
+    | Below you may configure as many filesystem disks as necessary, and you
+    | may even configure multiple disks for the same driver. Examples for
+    | most supported storage drivers are configured here for reference.
+    |
+    | Supported drivers: "local", "ftp", "sftp", "s3"
+    |
+    */
+
+    'disks' => [
+
+        'local' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'serve' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'public' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        's3' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'url' => env('AWS_URL'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Symbolic Links
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the symbolic links that will be created when the
+    | `storage:link` Artisan command is executed. The array keys should be
+    | the locations of the links and the values should be their targets.
+    |
+    */
+
+    'links' => [
+        public_path('storage') => storage_path('app/public'),
+    ],
+
+];
+
+
+
+
+config/logging.php :
+
+<?php
+
+use Monolog\Handler\NullHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\SyslogUdpHandler;
+use Monolog\Processor\PsrLogMessageProcessor;
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Log Channel
+    |--------------------------------------------------------------------------
+    |
+    | This option defines the default log channel that is utilized to write
+    | messages to your logs. The value provided here should match one of
+    | the channels present in the list of "channels" configured below.
+    |
+    */
+
+    'default' => env('LOG_CHANNEL', 'stack'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deprecations Log Channel
+    |--------------------------------------------------------------------------
+    |
+    | This option controls the log channel that should be used to log warnings
+    | regarding deprecated PHP and library features. This allows you to get
+    | your application ready for upcoming major versions of dependencies.
+    |
+    */
+
+    'deprecations' => [
+        'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
+        'trace' => env('LOG_DEPRECATIONS_TRACE', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Log Channels
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the log channels for your application. Laravel
+    | utilizes the Monolog PHP logging library, which includes a variety
+    | of powerful log handlers and formatters that you're free to use.
+    |
+    | Available drivers: "single", "daily", "slack", "syslog",
+    |                    "errorlog", "monolog", "custom", "stack"
+    |
+    */
+
+    'channels' => [
+
+        'stack' => [
+            'driver' => 'stack',
+            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'ignore_exceptions' => false,
+        ],
+
+        'single' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
+        'daily' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'slack' => [
+            'driver' => 'slack',
+            'url' => env('LOG_SLACK_WEBHOOK_URL'),
+            'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
+            'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
+            'level' => env('LOG_LEVEL', 'critical'),
+            'replace_placeholders' => true,
+        ],
+
+        'papertrail' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
+            'handler_with' => [
+                'host' => env('PAPERTRAIL_URL'),
+                'port' => env('PAPERTRAIL_PORT'),
+                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
+            ],
+            'processors' => [PsrLogMessageProcessor::class],
+        ],
+
+        'stderr' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => env('LOG_STDERR_FORMATTER'),
+            'processors' => [PsrLogMessageProcessor::class],
+        ],
+
+        'syslog' => [
+            'driver' => 'syslog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
+            'replace_placeholders' => true,
+        ],
+
+        'errorlog' => [
+            'driver' => 'errorlog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
+        'null' => [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
+        ],
+
+        'emergency' => [
+            'path' => storage_path('logs/laravel.log'),
+        ],
+
+    ],
+
+];
+
+
+
+
+config/mail.php :
+
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Mailer
+    |--------------------------------------------------------------------------
+    |
+    | This option controls the default mailer that is used to send all email
+    | messages unless another mailer is explicitly specified when sending
+    | the message. All additional mailers can be configured within the
+    | "mailers" array. Examples of each type of mailer are provided.
+    |
+    */
+
+    'default' => env('MAIL_MAILER', 'log'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mailer Configurations
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure all of the mailers used by your application plus
+    | their respective settings. Several examples have been configured for
+    | you and you are free to add your own as your application requires.
+    |
+    | Laravel supports a variety of mail "transport" drivers that can be used
+    | when delivering an email. You may specify which one you're using for
+    | your mailers below. You may also add additional mailers if needed.
+    |
+    | Supported: "smtp", "sendmail", "mailgun", "ses", "ses-v2",
+    |            "postmark", "resend", "log", "array",
+    |            "failover", "roundrobin"
+    |
+    */
+
+    'mailers' => [
+
+        'smtp' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_SCHEME'),
+            'url' => env('MAIL_URL'),
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => env('MAIL_PORT', 2525),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+        'ses' => [
+            'transport' => 'ses',
+        ],
+
+        'postmark' => [
+            'transport' => 'postmark',
+            // 'message_stream_id' => env('POSTMARK_MESSAGE_STREAM_ID'),
+            // 'client' => [
+            //     'timeout' => 5,
+            // ],
+        ],
+
+        'resend' => [
+            'transport' => 'resend',
+        ],
+
+        'sendmail' => [
+            'transport' => 'sendmail',
+            'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
+        ],
+
+        'log' => [
+            'transport' => 'log',
+            'channel' => env('MAIL_LOG_CHANNEL'),
+        ],
+
+        'array' => [
+            'transport' => 'array',
+        ],
+
+        'failover' => [
+            'transport' => 'failover',
+            'mailers' => [
+                'smtp',
+                'log',
+            ],
+            'retry_after' => 60,
+        ],
+
+        'roundrobin' => [
+            'transport' => 'roundrobin',
+            'mailers' => [
+                'ses',
+                'postmark',
+            ],
+            'retry_after' => 60,
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Global "From" Address
+    |--------------------------------------------------------------------------
+    |
+    | You may wish for all emails sent by your application to be sent from
+    | the same address. Here you may specify a name and address that is
+    | used globally for all emails that are sent by your application.
+    |
+    */
+
+    'from' => [
+        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+        'name' => env('MAIL_FROM_NAME', 'Example'),
+    ],
+
+];
+
+
+
+
+
+config/queue.php :
+
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Queue Connection Name
+    |--------------------------------------------------------------------------
+    |
+    | Laravel's queue supports a variety of backends via a single, unified
+    | API, giving you convenient access to each backend using identical
+    | syntax for each. The default queue connection is defined below.
+    |
+    */
+
+    'default' => env('QUEUE_CONNECTION', 'database'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Connections
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the connection options for every queue backend
+    | used by your application. An example configuration is provided for
+    | each backend supported by Laravel. You're also free to add more.
+    |
+    | Drivers: "sync", "database", "beanstalkd", "sqs", "redis",
+    |          "deferred", "background", "failover", "null"
+    |
+    */
+
+    'connections' => [
+
+        'sync' => [
+            'driver' => 'sync',
+        ],
+
+        'database' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => env('DB_QUEUE', 'default'),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'after_commit' => false,
+        ],
+
+        'beanstalkd' => [
+            'driver' => 'beanstalkd',
+            'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
+            'queue' => env('BEANSTALKD_QUEUE', 'default'),
+            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 90),
+            'block_for' => 0,
+            'after_commit' => false,
+        ],
+
+        'sqs' => [
+            'driver' => 'sqs',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'prefix' => env('SQS_PREFIX', 'https://sqs.us-east-1.amazonaws.com/your-account-id'),
+            'queue' => env('SQS_QUEUE', 'default'),
+            'suffix' => env('SQS_SUFFIX'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'after_commit' => false,
+        ],
+
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => env('REDIS_QUEUE', 'default'),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'deferred' => [
+            'driver' => 'deferred',
+        ],
+
+        'background' => [
+            'driver' => 'background',
+        ],
+
+        'failover' => [
+            'driver' => 'failover',
+            'connections' => [
+                'database',
+                'deferred',
+            ],
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Job Batching
+    |--------------------------------------------------------------------------
+    |
+    | The following options configure the database and table that store job
+    | batching information. These options can be updated to any database
+    | connection and table which has been defined by your application.
+    |
+    */
+
+    'batching' => [
+        'database' => env('DB_CONNECTION', 'sqlite'),
+        'table' => 'job_batches',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Failed Queue Jobs
+    |--------------------------------------------------------------------------
+    |
+    | These options configure the behavior of failed queue job logging so you
+    | can control how and where failed jobs are stored. Laravel ships with
+    | support for storing failed jobs in a simple file or in a database.
+    |
+    | Supported drivers: "database-uuids", "dynamodb", "file", "null"
+    |
+    */
+
+    'failed' => [
+        'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
+        'database' => env('DB_CONNECTION', 'sqlite'),
+        'table' => 'failed_jobs',
+    ],
+
+];
+
+
+
+
+config/services.php :
+
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Third Party Services
+    |--------------------------------------------------------------------------
+    |
+    | This file is for storing the credentials for third party services such
+    | as Mailgun, Postmark, AWS and more. This file provides the de facto
+    | location for this type of information, allowing packages to have
+    | a conventional file to locate the various service credentials.
+    |
+    */
+
+    'postmark' => [
+        'key' => env('POSTMARK_API_KEY'),
+    ],
+
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
+    ],
+
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'slack' => [
+        'notifications' => [
+            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+        ],
+    ],
+
+];
+
+
+
+
+config/session.php :
+
+<?php
+
+use Illuminate\Support\Str;
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Session Driver
+    |--------------------------------------------------------------------------
+    |
+    | This option determines the default session driver that is utilized for
+    | incoming requests. Laravel supports a variety of storage options to
+    | persist session data. Database storage is a great default choice.
+    |
+    | Supported: "file", "cookie", "database", "memcached",
+    |            "redis", "dynamodb", "array"
+    |
+    */
+
+    'driver' => env('SESSION_DRIVER', 'database'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the number of minutes that you wish the session
+    | to be allowed to remain idle before it expires. If you want them
+    | to expire immediately when the browser is closed then you may
+    | indicate that via the expire_on_close configuration option.
+    |
+    */
+
+    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+
+    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Encryption
+    |--------------------------------------------------------------------------
+    |
+    | This option allows you to easily specify that all of your session data
+    | should be encrypted before it's stored. All encryption is performed
+    | automatically by Laravel and you may use the session like normal.
+    |
+    */
+
+    'encrypt' => env('SESSION_ENCRYPT', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session File Location
+    |--------------------------------------------------------------------------
+    |
+    | When utilizing the "file" session driver, the session files are placed
+    | on disk. The default storage location is defined here; however, you
+    | are free to provide another location where they should be stored.
+    |
+    */
+
+    'files' => storage_path('framework/sessions'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Database Connection
+    |--------------------------------------------------------------------------
+    |
+    | When using the "database" or "redis" session drivers, you may specify a
+    | connection that should be used to manage these sessions. This should
+    | correspond to a connection in your database configuration options.
+    |
+    */
+
+    'connection' => env('SESSION_CONNECTION'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Database Table
+    |--------------------------------------------------------------------------
+    |
+    | When using the "database" session driver, you may specify the table to
+    | be used to store sessions. Of course, a sensible default is defined
+    | for you; however, you're welcome to change this to another table.
+    |
+    */
+
+    'table' => env('SESSION_TABLE', 'sessions'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Cache Store
+    |--------------------------------------------------------------------------
+    |
+    | When using one of the framework's cache driven session backends, you may
+    | define the cache store which should be used to store the session data
+    | between requests. This must match one of your defined cache stores.
+    |
+    | Affects: "dynamodb", "memcached", "redis"
+    |
+    */
+
+    'store' => env('SESSION_STORE'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Sweeping Lottery
+    |--------------------------------------------------------------------------
+    |
+    | Some session drivers must manually sweep their storage location to get
+    | rid of old sessions from storage. Here are the chances that it will
+    | happen on a given request. By default, the odds are 2 out of 100.
+    |
+    */
+
+    'lottery' => [2, 100],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Cookie Name
+    |--------------------------------------------------------------------------
+    |
+    | Here you may change the name of the session cookie that is created by
+    | the framework. Typically, you should not need to change this value
+    | since doing so does not grant a meaningful security improvement.
+    |
+    */
+
+    'cookie' => env(
+        'SESSION_COOKIE',
+        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Cookie Path
+    |--------------------------------------------------------------------------
+    |
+    | The session cookie path determines the path for which the cookie will
+    | be regarded as available. Typically, this will be the root path of
+    | your application, but you're free to change this when necessary.
+    |
+    */
+
+    'path' => env('SESSION_PATH', '/'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Session Cookie Domain
+    |--------------------------------------------------------------------------
+    |
+    | This value determines the domain and subdomains the session cookie is
+    | available to. By default, the cookie will be available to the root
+    | domain without subdomains. Typically, this shouldn't be changed.
+    |
+    */
+
+    'domain' => env('SESSION_DOMAIN'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTPS Only Cookies
+    |--------------------------------------------------------------------------
+    |
+    | By setting this option to true, session cookies will only be sent back
+    | to the server if the browser has a HTTPS connection. This will keep
+    | the cookie from being sent to you when it can't be done securely.
+    |
+    */
+
+    'secure' => env('SESSION_SECURE_COOKIE'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP Access Only
+    |--------------------------------------------------------------------------
+    |
+    | Setting this value to true will prevent JavaScript from accessing the
+    | value of the cookie and the cookie will only be accessible through
+    | the HTTP protocol. It's unlikely you should disable this option.
+    |
+    */
+
+    'http_only' => env('SESSION_HTTP_ONLY', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Same-Site Cookies
+    |--------------------------------------------------------------------------
+    |
+    | This option determines how your cookies behave when cross-site requests
+    | take place, and can be used to mitigate CSRF attacks. By default, we
+    | will set this value to "lax" to permit secure cross-site requests.
+    |
+    | See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    |
+    | Supported: "lax", "strict", "none", null
+    |
+    */
+
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Partitioned Cookies
+    |--------------------------------------------------------------------------
+    |
+    | Setting this value to true will tie the cookie to the top-level site for
+    | a cross-site context. Partitioned cookies are accepted by the browser
+    | when flagged "secure" and the Same-Site attribute is set to "none".
+    |
+    */
+
+    'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
+
+];
+
+
+
+
+
+database/migrations/2026_02_06_223527_add_is_admin_to_users_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->boolean('is_admin')->default(false)->after('password');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('is_admin');
+        });
+    }
+};
+
+
+
+
+database/migrations/2026_02_06_223738_create_pages_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('pages', function (Blueprint $table) {
+            $table->id();
+            $table->string('key')->unique(); // home, about, contact, etc.
+            $table->string('title');
+            $table->longText('body')->nullable();
+
+            $table->string('meta_title')->nullable();
+            $table->string('meta_description', 160)->nullable();
+
+            $table->boolean('is_published')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('pages');
+    }
+};
+
+
+
+database/migrations/2026_02_06_223957_create_services_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('services', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('price_text')->nullable(); // e.g. "From €49"
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->boolean('is_published')->default(true);
+            $table->timestamps();
+
+            $table->index(['is_published', 'sort_order']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('services');
+    }
+};
+
+
+
+
+database/migrations/2026_02_06_224346_create_posts_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->unique();
+            $table->text('excerpt')->nullable();
+            $table->longText('body')->nullable();
+
+            $table->string('cover_image_path')->nullable();
+
+            $table->string('meta_title')->nullable();
+            $table->string('meta_description', 160)->nullable();
+
+            $table->timestamp('published_at')->nullable();
+            $table->boolean('is_published')->default(false);
+
+            $table->timestamps();
+
+            $table->index(['is_published', 'published_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('posts');
+    }
+};
+
+
+
+
+database/migrations/2026_02_06_224616_create_contact_messages_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('contact_messages', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email');
+            $table->string('phone')->nullable();
+            $table->text('message');
+            $table->timestamps();
+
+            $table->index('created_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('contact_messages');
+    }
+};
+
+
+
+database/migrations/2026_02_06_224742_create_settings_table.php :
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('settings', function (Blueprint $table) {
+            $table->id();
+            $table->string('key')->unique();   // business_name, phone, logo_path...
+            $table->text('value')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('settings');
+    }
+};
+
+
+
+database/seeders/DatabaseSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    use WithoutModelEvents;
+
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // User::factory(10)->create();
+
+        // User::factory()->create([
+        //     'name' => 'Admin',
+        //     'email' => 'admin@example.com',
+        //     'is_admin' => true,
+        // ]);
+
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin',
+                'is_admin' => true,
+                'password' => bcrypt('password'), // change later
+            ]
+        );
+
+        // create/update admin user here...
+        $this->call(PageSeeder::class);
+
+    }
+}
+
+
+
+
+database/seeders/PageSeeder.php :
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+use App\Models\Page;
+
+class PageSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+     public function run(): void
+    {
+        $pages = [
+            [
+                'key' => 'home',
+                'title' => 'Welcome',
+                'body' => 'Edit this content from the admin panel.',
+                'meta_title' => 'Home',
+                'meta_description' => 'Home page description.',
+                'is_published' => true,
+            ],
+            [
+                'key' => 'about',
+                'title' => 'About Us',
+                'body' => 'Write your story here.',
+                'meta_title' => 'About',
+                'meta_description' => 'About page description.',
+                'is_published' => true,
+            ],
+            [
+                'key' => 'contact',
+                'title' => 'Contact',
+                'body' => 'You can contact us using the form below.',
+                'meta_title' => 'Contact',
+                'meta_description' => 'Contact page description.',
+                'is_published' => true,
+            ],
+        ];
+
+        foreach ($pages as $data) {
+            Page::updateOrCreate(['key' => $data['key']], $data);
+        }
+    }
+}
+
+
+
+
+resources/views/admin/messages/index.blade.php :
+
+@extends('layouts.admin', ['title' => 'Messages'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Messages</h1>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">{{ session('status') }}</div>
+    @endif
+
+    <div class="mt-6 border rounded overflow-hidden">
+        <table class="w-full">
+            <thead class="border-b">
+                <tr>
+                    <th class="text-left p-3">Date</th>
+                    <th class="text-left p-3">Name</th>
+                    <th class="text-left p-3">Email</th>
+                    <th class="text-left p-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($messages as $m)
+                    <tr class="border-b">
+                        <td class="p-3">{{ $m->created_at->format('Y-m-d H:i') }}</td>
+                        <td class="p-3">{{ $m->name }}</td>
+                        <td class="p-3">{{ $m->email }}</td>
+                        <td class="p-3 flex gap-3">
+                            <a class="underline" href="{{ route('admin.messages.show', $m) }}">View</a>
+
+                            <form method="POST" action="{{ route('admin.messages.destroy', $m) }}"
+                                  onsubmit="return confirm('Delete this message?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="underline" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">{{ $messages->links() }}</div>
+@endsection
+
+
+
+
+resources/views/admin/messages/show.blade.php :
+
+@extends('layouts.admin', ['title' => 'Message'])
+
+@section('content')
+    <a class="underline" href="{{ route('admin.messages.index') }}">← Back</a>
+
+    <h1 class="mt-4 text-2xl font-bold">Message</h1>
+
+    <div class="mt-4 border p-4 space-y-2">
+        <div><strong>Date:</strong> {{ $contactMessage->created_at->format('Y-m-d H:i') }}</div>
+        <div><strong>Name:</strong> {{ $contactMessage->name }}</div>
+        <div><strong>Email:</strong> {{ $contactMessage->email }}</div>
+        <div><strong>Phone:</strong> {{ $contactMessage->phone ?? '-' }}</div>
+        <div class="pt-2"><strong>Message:</strong></div>
+        <div class="whitespace-pre-line">{{ $contactMessage->message }}</div>
+    </div>
+@endsection
+
+
+
+resources/views/admin/pages/edit.blade.php :
+
+@extends('layouts.admin', ['title' => 'Edit Page'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Edit Page: {{ $page->key }}</h1>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.pages.update', $page) }}">
+        @csrf
+        @method('PUT')
+
+        <div>
+            <label class="block font-medium">Title</label>
+            <input class="border p-2 w-full" name="title" value="{{ old('title', $page->title) }}">
+            @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Body</label>
+            <textarea class="border p-2 w-full" rows="10" name="body">{{ old('body', $page->body) }}</textarea>
+            @error('body') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Meta title</label>
+            <input class="border p-2 w-full" name="meta_title" value="{{ old('meta_title', $page->meta_title) }}">
+            @error('meta_title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Meta description (max 160)</label>
+            <input class="border p-2 w-full" name="meta_description" value="{{ old('meta_description', $page->meta_description) }}">
+            @error('meta_description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Published</label>
+            <select class="border p-2" name="is_published">
+                <option value="1" @selected(old('is_published', (int)$page->is_published) === 1)>Yes</option>
+                <option value="0" @selected(old('is_published', (int)$page->is_published) === 0)>No</option>
+            </select>
+            @error('is_published') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div class="flex gap-3">
+            <button class="border px-4 py-2" type="submit">Save</button>
+            <a class="underline" href="{{ route('admin.pages.index') }}">Back</a>
+        </div>
+    </form>
+@endsection
+
+
+
+
+resources/views/admin/pages/index.blade.php :
+
+@extends('layouts.admin', ['title' => 'Pages'])
+
+@section('content')
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Pages</h1>
+    </div>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <div class="mt-6 border rounded">
+        <table class="w-full">
+            <thead class="border-b">
+                <tr>
+                    <th class="text-left p-3">Key</th>
+                    <th class="text-left p-3">Title</th>
+                    <th class="text-left p-3">Published</th>
+                    <th class="text-left p-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($pages as $page)
+                    <tr class="border-b">
+                        <td class="p-3">{{ $page->key }}</td>
+                        <td class="p-3">{{ $page->title }}</td>
+                        <td class="p-3">{{ $page->is_published ? 'Yes' : 'No' }}</td>
+                        <td class="p-3">
+                            <a class="underline" href="{{ route('admin.pages.edit', $page) }}">Edit</a>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+@endsection
+
+
+
+
+resources/views/admin/posts/partials/form.blade.php :
+
+@php
+    $title = old('title', $post?->title);
+    $slug = old('slug', $post?->slug);
+    $excerpt = old('excerpt', $post?->excerpt);
+    $body = old('body', $post?->body);
+    $meta_title = old('meta_title', $post?->meta_title);
+    $meta_description = old('meta_description', $post?->meta_description);
+    $is_published = old('is_published', (int)($post?->is_published ?? 0));
+    $published_at = old('published_at', $post?->published_at?->format('Y-m-d\TH:i'));
+@endphp
+
+<div>
+    <label class="block font-medium">Title</label>
+    <input class="border p-2 w-full" name="title" value="{{ $title }}">
+    @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Slug (optional)</label>
+    <input class="border p-2 w-full" name="slug" value="{{ $slug }}">
+    <div class="text-sm mt-1">Leave empty to auto-generate from the title.</div>
+    @error('slug') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Excerpt</label>
+    <textarea class="border p-2 w-full" rows="3" name="excerpt">{{ $excerpt }}</textarea>
+    @error('excerpt') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Body</label>
+    <textarea class="border p-2 w-full" rows="10" name="body">{{ $body }}</textarea>
+    @error('body') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Cover image (optional)</label>
+    <input type="file" name="cover_image">
+    @error('cover_image') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+
+    @if($post?->cover_image_path)
+        <div class="mt-2">
+            <div class="text-sm">Current:</div>
+            <img class="mt-1 max-w-sm border" src="{{ asset('storage/'.$post->cover_image_path) }}" alt="">
+        </div>
+    @endif
+</div>
+
+<div>
+    <label class="block font-medium">Meta title</label>
+    <input class="border p-2 w-full" name="meta_title" value="{{ $meta_title }}">
+    @error('meta_title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Meta description (max 160)</label>
+    <input class="border p-2 w-full" name="meta_description" value="{{ $meta_description }}">
+    @error('meta_description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Published</label>
+    <select class="border p-2" name="is_published">
+        <option value="1" @selected((int)$is_published === 1)>Yes</option>
+        <option value="0" @selected((int)$is_published === 0)>No</option>
+    </select>
+    @error('is_published') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Publish date/time (optional)</label>
+    <input class="border p-2" type="datetime-local" name="published_at" value="{{ $published_at }}">
+    <div class="text-sm mt-1">If empty, and Published=Yes, it can show immediately (depending on your model logic).</div>
+    @error('published_at') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+
+
+resources/views/admin/posts/create.blade.php :
+
+@extends('layouts.admin', ['title' => 'New Post'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">New Post</h1>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.posts.store') }}" enctype="multipart/form-data">
+        @csrf
+        @include('admin.posts.partials.form', ['post' => null])
+        <button class="border px-4 py-2" type="submit">Create</button>
+        <a class="underline ml-3" href="{{ route('admin.posts.index') }}">Back</a>
+    </form>
+@endsection
+
+
+
+resources/views/admin/posts/edit.blade.php :
+
+@extends('layouts.admin', ['title' => 'Edit Post'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Edit Post</h1>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.posts.update', $post) }}" enctype="multipart/form-data">
+        @csrf
+        @method('PUT')
+        @include('admin.posts.partials.form', ['post' => $post])
+        <button class="border px-4 py-2" type="submit">Save</button>
+        <a class="underline ml-3" href="{{ route('admin.posts.index') }}">Back</a>
+    </form>
+@endsection
+
+
+
+resources/views/admin/posts/index.blade.php :
+
+@extends('layouts.admin', ['title' => 'Posts'])
+
+@section('content')
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Posts</h1>
+        <a class="border px-4 py-2" href="{{ route('admin.posts.create') }}">New</a>
+    </div>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">{{ session('status') }}</div>
+    @endif
+
+    <div class="mt-6 border rounded overflow-hidden">
+        <table class="w-full">
+            <thead class="border-b">
+                <tr>
+                    <th class="text-left p-3">Title</th>
+                    <th class="text-left p-3">Slug</th>
+                    <th class="text-left p-3">Published</th>
+                    <th class="text-left p-3">Published at</th>
+                    <th class="text-left p-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($posts as $post)
+                    <tr class="border-b">
+                        <td class="p-3">{{ $post->title }}</td>
+                        <td class="p-3">{{ $post->slug }}</td>
+                        <td class="p-3">{{ $post->is_published ? 'Yes' : 'No' }}</td>
+                        <td class="p-3">{{ $post->published_at?->format('Y-m-d H:i') }}</td>
+                        <td class="p-3 flex gap-3">
+                            <a class="underline" href="{{ route('admin.posts.edit', $post) }}">Edit</a>
+
+                            <form method="POST" action="{{ route('admin.posts.destroy', $post) }}"
+                                  onsubmit="return confirm('Delete this post?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="underline" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">{{ $posts->links() }}</div>
+@endsection
+
+
+
+
+resources/views/admin/services/partials/form.blade.php :
+
+@php
+    $title = old('title', $service?->title);
+    $description = old('description', $service?->description);
+    $price_text = old('price_text', $service?->price_text);
+    $sort_order = old('sort_order', $service?->sort_order ?? 0);
+    $is_published = old('is_published', (int)($service?->is_published ?? 1));
+@endphp
+
+<div>
+    <label class="block font-medium">Title</label>
+    <input class="border p-2 w-full" name="title" value="{{ $title }}">
+    @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Description</label>
+    <textarea class="border p-2 w-full" rows="6" name="description">{{ $description }}</textarea>
+    @error('description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Price text (optional)</label>
+    <input class="border p-2 w-full" name="price_text" value="{{ $price_text }}">
+    @error('price_text') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Sort order</label>
+    <input class="border p-2 w-full" type="number" name="sort_order" value="{{ $sort_order }}">
+    @error('sort_order') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+<div>
+    <label class="block font-medium">Published</label>
+    <select class="border p-2" name="is_published">
+        <option value="1" @selected((int)$is_published === 1)>Yes</option>
+        <option value="0" @selected((int)$is_published === 0)>No</option>
+    </select>
+    @error('is_published') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+</div>
+
+
+
+
+resources/views/admin/services/create.blade.php :
+
+@extends('layouts.admin', ['title' => 'New Service'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">New Service</h1>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.services.store') }}">
+        @csrf
+        @include('admin.services.partials.form', ['service' => null])
+        <button class="border px-4 py-2" type="submit">Create</button>
+        <a class="underline ml-3" href="{{ route('admin.services.index') }}">Back</a>
+    </form>
+@endsection
+
+
+
+
+resources/views/admin/services/edit.blade.php :
+
+@extends('layouts.admin', ['title' => 'Edit Service'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Edit Service</h1>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.services.update', $service) }}">
+        @csrf
+        @method('PUT')
+        @include('admin.services.partials.form', ['service' => $service])
+        <button class="border px-4 py-2" type="submit">Save</button>
+        <a class="underline ml-3" href="{{ route('admin.services.index') }}">Back</a>
+    </form>
+@endsection
+
+
+
+resources/views/admin/services/index.blade.php :
+
+@extends('layouts.admin', ['title' => 'Services'])
+
+@section('content')
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Services</h1>
+        <a class="border px-4 py-2" href="{{ route('admin.services.create') }}">New</a>
+    </div>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    <div class="mt-6 border rounded overflow-hidden">
+        <table class="w-full">
+            <thead class="border-b">
+                <tr>
+                    <th class="text-left p-3">Order</th>
+                    <th class="text-left p-3">Title</th>
+                    <th class="text-left p-3">Published</th>
+                    <th class="text-left p-3">Price</th>
+                    <th class="text-left p-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($services as $service)
+                    <tr class="border-b">
+                        <td class="p-3">{{ $service->sort_order }}</td>
+                        <td class="p-3">{{ $service->title }}</td>
+                        <td class="p-3">{{ $service->is_published ? 'Yes' : 'No' }}</td>
+                        <td class="p-3">{{ $service->price_text }}</td>
+                        <td class="p-3 flex gap-3">
+                            <a class="underline" href="{{ route('admin.services.edit', $service) }}">Edit</a>
+
+                            <form method="POST" action="{{ route('admin.services.destroy', $service) }}"
+                                  onsubmit="return confirm('Delete this service?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="underline" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        {{ $services->links() }}
+    </div>
+@endsection
+
+
+
+resources/views/admin/settings/edit.blade.php :
+
+@extends('layouts.admin', ['title' => 'Settings'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Settings</h1>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">{{ session('status') }}</div>
+    @endif
+
+    <form class="mt-6 space-y-4 max-w-xl" method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data">
+        @csrf
+        @method('PUT')
+
+        <div>
+            <label class="block font-medium">Business name</label>
+            <input class="border p-2 w-full" name="business_name" value="{{ old('business_name', $settings['business_name']) }}">
+            @error('business_name') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Phone</label>
+            <input class="border p-2 w-full" name="phone" value="{{ old('phone', $settings['phone']) }}">
+            @error('phone') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Email</label>
+            <input class="border p-2 w-full" type="email" name="email" value="{{ old('email', $settings['email']) }}">
+            @error('email') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Address</label>
+            <input class="border p-2 w-full" name="address" value="{{ old('address', $settings['address']) }}">
+            @error('address') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Logo (optional)</label>
+            <input type="file" name="logo">
+            @error('logo') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+
+            @if($settings['logo_path'])
+                <div class="mt-3">
+                    <div class="text-sm">Current logo:</div>
+                    <img class="mt-2 max-w-xs border" src="{{ asset('storage/'.$settings['logo_path']) }}" alt="Logo">
+                </div>
+            @endif
+        </div>
+
+        <button class="border px-4 py-2" type="submit">Save</button>
+    </form>
+@endsection
+
+
+
+
+resources/views/admin/dashboard.blade.php :
+
+@extends('layouts.admin', ['title' => 'Admin Dashboard'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+
+    <div class="mt-6 grid gap-4">
+        <div>Services: {{ $stats['services'] }}</div>
+        <div>Posts: {{ $stats['posts'] }}</div>
+        <div>Messages: {{ $stats['messages'] }}</div>
+    </div>
+@endsection
+{{-- $user = \App\Models\User::where('email', 'Abdulaibayo08@gmail.com')->first();
+$user->is_admin = true;
+$user->save(); --}}
+
+
+
+
+resources/views/emails/contact/received.blade.php :
+
+@component('mail::message')
+# New Contact Message
+
+**Name:** {{ $msg->name }}
+**Email:** {{ $msg->email }}
+**Phone:** {{ $msg->phone ?? '-' }}
+
+
+---
+
+**Message:**
+
+{{ $msg->message }}
+
+@endcomponent
+
+
+
+resources/views/layouts/admin.blade.php :
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title ?? 'Admin' }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="min-h-screen">
+    <header class="p-4 border-b flex items-center justify-between">
+        <nav class="flex gap-4">
+            <a href="{{ route('admin.dashboard') }}">Dashboard</a>
+            <a href="{{ route('admin.pages.index') }}">Pages</a>
+            <a href="{{ route('admin.services.index') }}">Services</a>
+            <a href="{{ route('home') }}">View site</a>
+
+            <a href="{{ route('admin.messages.index') }}">Messages</a>
+
+            <a href="{{ route('admin.settings.edit') }}">Settings</a>
+
+            <a href="{{ route('admin.posts.index') }}">Posts</a>
+
+        </nav>
+
+
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit">Logout</button>
+        </form>
+    </header>
+
+    <main class="p-6">
+        @yield('content')
+    </main>
+</body>
+</html>
+
+
+
+
+
+resources/views/layouts/app.blade.php :
+
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+
+        <title>{{ config('app.name', 'Laravel') }}</title>
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+
+        <!-- Scripts -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="font-sans antialiased">
+        <div class="min-h-screen bg-gray-100">
+            @include('layouts.navigation')
+
+            <!-- Page Heading -->
+            @isset($header)
+                <header class="bg-white shadow">
+                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        {{ $header }}
+                    </div>
+                </header>
+            @endisset
+
+            <!-- Page Content -->
+            <main>
+                {{ $slot }}
+            </main>
+        </div>
+    </body>
+</html>
+
+
+
+
+
+resources/views/layouts/guest.blade.php :
+
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+
+        <title>{{ config('app.name', 'Laravel') }}</title>
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+
+        <!-- Scripts -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="font-sans text-gray-900 antialiased">
+        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
+            <div>
+                <a href="/">
+                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
+                </a>
+            </div>
+
+            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
+                {{ $slot }}
+            </div>
+        </div>
+    </body>
+</html>
+
+
+
+
+
+resources/views/layouts/navigation.blade.php :
+
+<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+    <!-- Primary Navigation Menu -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <!-- Logo -->
+                <div class="shrink-0 flex items-center">
+                    <a href="{{ route('dashboard') }}">
+                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                    </a>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                        {{ __('Dashboard') }}
+                    </x-nav-link>
+                </div>
+            </div>
+
+            <!-- Settings Dropdown -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6">
+                <x-dropdown align="right" width="48">
+                    <x-slot name="trigger">
+                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                            <div>{{ Auth::user()->name }}</div>
+
+                            <div class="ms-1">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </button>
+                    </x-slot>
+
+                    <x-slot name="content">
+                        <x-dropdown-link :href="route('profile.edit')">
+                            {{ __('Profile') }}
+                        </x-dropdown-link>
+
+                        <!-- Authentication -->
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+
+                            <x-dropdown-link :href="route('logout')"
+                                    onclick="event.preventDefault();
+                                                this.closest('form').submit();">
+                                {{ __('Log Out') }}
+                            </x-dropdown-link>
+                        </form>
+                    </x-slot>
+                </x-dropdown>
+            </div>
+
+            <!-- Hamburger -->
+            <div class="-me-2 flex items-center sm:hidden">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Responsive Navigation Menu -->
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+        <div class="pt-2 pb-3 space-y-1">
+            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                {{ __('Dashboard') }}
+            </x-responsive-nav-link>
+        </div>
+
+        <!-- Responsive Settings Options -->
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="px-4">
+                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
+                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+            </div>
+
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link :href="route('profile.edit')">
+                    {{ __('Profile') }}
+                </x-responsive-nav-link>
+
+                <!-- Authentication -->
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+
+                    <x-responsive-nav-link :href="route('logout')"
+                            onclick="event.preventDefault();
+                                        this.closest('form').submit();">
+                        {{ __('Log Out') }}
+                    </x-responsive-nav-link>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+
+
+resources/views/layouts/public.blade.php :
+
+@php
+    $businessName = \App\Models\Setting::getValue('business_name', 'My Business');
+    $logoPath = \App\Models\Setting::getValue('logo_path');
+@endphp
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title ?? 'Business Site' }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="min-h-screen">
+    <header class="p-4 border-b">
+        <div class="flex items-center gap-3">
+            @if($logoPath)
+                <img src="{{ asset('storage/'.$logoPath) }}" class="h-10 w-auto" alt="Logo">
+            @endif
+            <div class="font-bold">{{ $businessName }}</div>
+        </div>
+
+        <nav class="flex gap-4">
+            <a href="{{ route('page.show', 'home') }}">Home</a>
+            <a href="{{ route('posts.index') }}">News</a>
+            <a href="{{ route('services.index') }}">Services</a>
+            <a href="{{ route('page.show', 'about') }}">About</a>
+            <a href="{{ route('page.show', 'contact') }}">Contact</a>
+            <a href="{{ route('admin.dashboard') }}">Admin</a>
+
+        </nav>
+
+    </header>
+
+    <main class="p-6">
+        @yield('content')
+    </main>
+</body>
+</html>
+
+
+
+
+
+resources/views/public/posts/show.blade.php :
+
+@extends('layouts.public', ['title' => $post->meta_title ?: $post->title])
+
+@section('content')
+    <a class="underline" href="{{ route('posts.index') }}">← Back to news</a>
+
+    <h1 class="mt-4 text-2xl font-bold">{{ $post->title }}</h1>
+
+    @if($post->cover_image_path)
+        <img class="mt-4 max-w-2xl border" src="{{ asset('storage/'.$post->cover_image_path) }}" alt="">
+    @endif
+
+    @if($post->body)
+        <div class="mt-4 whitespace-pre-line">
+            {{ $post->body }}
+        </div>
+    @endif
+@endsection
+
+
+
+resources/views/public/contact.blade.php :
+
+@extends('layouts.public', ['title' => 'Contact'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Contact</h1>
+
+    @if(session('status'))
+        <div class="mt-4 p-3 border">{{ session('status') }}</div>
+    @endif
+
+    <form class="mt-6 space-y-4 max-w-xl" method="POST" action="{{ route('contact.submit') }}">
+        @csrf
+
+        <div>
+            <label class="block font-medium">Name</label>
+            <input class="border p-2 w-full" name="name" value="{{ old('name') }}">
+            @error('name') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Email</label>
+            <input class="border p-2 w-full" type="email" name="email" value="{{ old('email') }}">
+            @error('email') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Phone (optional)</label>
+            <input class="border p-2 w-full" name="phone" value="{{ old('phone') }}">
+            @error('phone') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label class="block font-medium">Message</label>
+            <textarea class="border p-2 w-full" rows="6" name="message">{{ old('message') }}</textarea>
+            @error('message') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+        </div>
+
+        <button class="border px-4 py-2" type="submit">Send</button>
+    </form>
+@endsection
+
+
+
+
+
+resources/views/public/home.blade.php :
+
+@extends('layouts.public', ['title' => 'Home'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Home</h1>
+    <p class="mt-2">Project #1 skeleton is running ✅</p>
+@endsection
+
+
+
+
+resources/views/public/page.blade.php :
+
+@extends('layouts.public', ['title' => $page->meta_title ?: $page->title])
+
+@section('content')
+    <h1 class="text-2xl font-bold">{{ $page->title }}</h1>
+
+    @if($page->body)
+        <div class="mt-4 whitespace-pre-line">
+            {{ $page->body }}
+        </div>
+    @endif
+@endsection
+
+
+
+
+
+resources/views/public/services.blade.php :
+
+@extends('layouts.public', ['title' => 'Services'])
+
+@section('content')
+    <h1 class="text-2xl font-bold">Services</h1>
+
+    <div class="mt-6 space-y-4">
+        @forelse($services as $service)
+            <div class="border p-4">
+                <h2 class="text-xl font-semibold">{{ $service->title }}</h2>
+
+                @if($service->price_text)
+                    <div class="mt-1">{{ $service->price_text }}</div>
+                @endif
+
+                @if($service->description)
+                    <p class="mt-2 whitespace-pre-line">{{ $service->description }}</p>
+                @endif
+            </div>
+        @empty
+            <p>No services published yet.</p>
+        @endforelse
+    </div>
+@endsection
+
+
+
+
+
+resources/views/dashboard.blade.php :
+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Dashboard') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    {{ __("You're logged in!") }}
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+
+
+
+
+
+
+routes/auth.php :
+
+<?php
+
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')->group(function () {
+    Route::get('register', [RegisteredUserController::class, 'create'])
+        ->name('register');
+
+    Route::post('register', [RegisteredUserController::class, 'store']);
+
+    Route::get('login', [AuthenticatedSessionController::class, 'create'])
+        ->name('login');
+
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
+        ->name('password.request');
+
+    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->name('password.email');
+
+    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+        ->name('password.reset');
+
+    Route::post('reset-password', [NewPasswordController::class, 'store'])
+        ->name('password.store');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
+        ->name('password.confirm');
+
+    Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+
+    Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+        ->name('logout');
+});
+
+
+
+
+routes/console.php :
+
+<?php
+
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Artisan;
+
+Artisan::command('inspire', function () {
+    $this->comment(Inspiring::quote());
+})->purpose('Display an inspiring quote');
+
+
+
+
+routes/web.php :
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PageController as AdminPageController;
+use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Admin\PostController as AdminPostController;
+use App\Http\Controllers\Admin\MessageController as AdminMessageController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+
+use App\Http\Controllers\Public\PageController as PublicPageController;
+use App\Http\Controllers\Public\ServiceController as PublicServiceController;
+use App\Http\Controllers\Public\PostController as PublicPostController;
+use App\Http\Controllers\Public\ContactController as PublicContactController;
+
+/*
+|--------------------------------------------------------------------------
+| Public routes
+|--------------------------------------------------------------------------
+*/
+
+// Blog / News
+Route::get('/news', [PublicPostController::class, 'index'])->name('posts.index');
+Route::get('/news/{slug}', [PublicPostController::class, 'show'])->name('posts.show');
+
+// Services
+Route::get('/services', [PublicServiceController::class, 'index'])->name('services.index');
+
+// Contact (form)
+Route::get('/contact', [PublicContactController::class, 'show'])->name('contact.show');
+Route::post('/contact', [PublicContactController::class, 'submit'])->name('contact.submit');
+
+// Home page = "/" (redirect to the CMS page "home")
+Route::get('/', function () {
+    return redirect()->route('page.show', 'home');
+})->name('home');
+
+// CMS pages (ONLY these keys allowed)
+// IMPORTANT: keep this BELOW the explicit public routes above
+Route::get('/{key}', [PublicPageController::class, 'show'])
+    ->whereIn('key', ['home', 'about', 'contact'])
+    ->name('page.show');
+
+/*
+|--------------------------------------------------------------------------
+| Admin routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')
+    ->middleware(['auth', 'admin'])
+    ->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+        // Pages (edit-only)
+        Route::get('/pages', [AdminPageController::class, 'index'])->name('admin.pages.index');
+        Route::get('/pages/{page}/edit', [AdminPageController::class, 'edit'])->name('admin.pages.edit');
+        Route::put('/pages/{page}', [AdminPageController::class, 'update'])->name('admin.pages.update');
+
+        // Services CRUD
+        Route::resource('/services', AdminServiceController::class)->names('admin.services');
+
+        // Posts CRUD (admin only)
+        Route::resource('/posts', AdminPostController::class)->names('admin.posts')->except(['show']);
+
+        // Contact messages inbox
+        Route::get('/messages', [AdminMessageController::class, 'index'])->name('admin.messages.index');
+        Route::get('/messages/{contactMessage}', [AdminMessageController::class, 'show'])->name('admin.messages.show');
+        Route::delete('/messages/{contactMessage}', [AdminMessageController::class, 'destroy'])->name('admin.messages.destroy');
+
+        // Settings
+        Route::get('/settings', [AdminSettingController::class, 'edit'])->name('admin.settings.edit');
+        Route::put('/settings', [AdminSettingController::class, 'update'])->name('admin.settings.update');
+    });
+
+require __DIR__.'/auth.php';
+
+
+
+
+
+
+
+
+app/Console/Commands/MakeAdmin.php :
+
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\User;
+use Illuminate\Console\Command;
+
+class MakeAdmin extends Command
+{
+    protected $signature = 'user:make-admin {email}';
+    protected $description = 'Promote a user to admin by email';
+
+    public function handle(): int
+    {
+        $email = $this->argument('email');
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            $this->error("User not found: {$email}");
+            return self::FAILURE;
+        }
+
+        $user->is_admin = true;
+        $user->save();
+
+        $this->info("✅ {$email} is now an admin.");
+        return self::SUCCESS;
+    }
+}
