@@ -7,6 +7,7 @@
 
     @if($post->cover_image_path)
         <img class="mt-4 max-w-2xl border" src="{{ asset('storage/'.$post->cover_image_path) }}" alt="">
+        
     @endif
 
     @if($post->body)

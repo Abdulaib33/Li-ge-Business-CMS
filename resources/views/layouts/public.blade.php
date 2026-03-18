@@ -15,7 +15,8 @@
     <header class="p-4 border-b">
         <div class="flex items-center gap-3">
             @if($logoPath)
-                <img class="mt-2 max-w-xs border" src="{{ Storage::disk('r2')->url($settings['logo_path']) }}" alt="Logo">
+                {{-- <img src="{{ asset('storage/'.$logoPath) }}" class="h-10 w-auto" alt="Logo"> --}}
+                <img class="mt-2 max-w-xs border" src="{{ Storage::disk('r2')->url($logoPath) }}" alt="Logo">
             @endif
             <div class="font-bold">{{ $businessName }}</div>
         </div>
