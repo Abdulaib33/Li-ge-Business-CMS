@@ -16,7 +16,7 @@
         <div class="flex items-center gap-3">
             @if($logoPath)
                 {{-- <img src="{{ asset('storage/'.$logoPath) }}" class="h-10 w-auto" alt="Logo"> --}}
-                <img class="mt-2 w-16 h-16 object-contain rounded border" src="{{ Storage::disk('r2')->url($logoPath) }}" alt="Logo">
+                <img class="mt-2 w-10 h-10 object-contain rounded border" src="{{ Storage::disk('r2')->url($logoPath) }}" alt="Logo">
             @endif
             <div class="font-bold">{{ $businessName }}</div>
         </div>
