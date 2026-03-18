@@ -66,6 +66,7 @@ return [
             'region' => env('R2_REGION', 'auto'),
             'bucket' => env('R2_BUCKET'),
             'endpoint' => env('R2_ENDPOINT'),
+            'url' => env('R2_URL'), // JUST ADDED THIS SO THAT I CAN DISPLAY MY IMAGE BUT THE IMAGE IS BEING RECIEVED IN THE R2 buckets
             'use_path_style_endpoint' => true, // important for Cloudflare R2
         ],
 
