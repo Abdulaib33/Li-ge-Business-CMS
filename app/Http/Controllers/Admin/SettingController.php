@@ -39,7 +39,8 @@ class SettingController extends Controller
                 Storage::disk('public')->delete($old);
             }
 
-            $path = $request->file('logo')->store('settings', 'public');
+            // store in R2
+            $path = $request->file('logo')->store('settings', 'r2');
             Setting::setValue('logo_path', $path);
         }
 
