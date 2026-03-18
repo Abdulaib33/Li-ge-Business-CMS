@@ -7,14 +7,14 @@
 @endphp
 
 <div>
-    <label class="block font-medium">Title</label>
+    <label class="block font-medium label">Title</label>
     <input class="border p-2 w-full" name="title" value="{{ $title }}">
-    @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
+    @error('title') <div class="text-sm mt-1 error-text">{{ $message }}</div> @enderror
 </div>
 
 <div>
-    <label class="block font-medium">Description</label>
-    <textarea class="border p-2 w-full" rows="6" name="description">{{ $description }}</textarea>
+    <label class="block font-medium label">Description</label>
+    <textarea class="border p-2 w-full textarea" rows="6" name="description">{{ $description }}</textarea>
     @error('description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 

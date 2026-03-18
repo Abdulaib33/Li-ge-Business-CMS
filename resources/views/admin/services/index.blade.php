@@ -20,7 +20,7 @@
                     <th class="text-left p-3">Title</th>
                     <th class="text-left p-3">Published</th>
                     <th class="text-left p-3">Price</th>
-                    <th class="text-left p-3"></th>
+                    <th class="text-left p-3">Actions</th>
                 </tr>
             </thead>
             <tbody>

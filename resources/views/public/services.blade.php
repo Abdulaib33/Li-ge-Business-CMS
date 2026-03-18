@@ -1,23 +1,30 @@
 @extends('layouts.public', ['title' => 'Services'])
 
 @section('content')
-    <h1 class="text-2xl font-bold">Services</h1>
+    <section class="page-shell">
+        <div class="max-w-2xl">
+            <h1 class="section-title">Services</h1>
+            <p class="section-subtitle">Explore the services offered by our business.</p>
+        </div>
 
-    <div class="mt-6 space-y-4">
-        @forelse($services as $service)
-            <div class="border p-4">
-                <h2 class="text-xl font-semibold">{{ $service->title }}</h2>
+        <div class="mt-8 grid gap-6 md:grid-cols-2">
+            @forelse($services as $service)
+                <article class="card">
+                    <div class="card-body">
+                        <h2 class="text-xl font-semibold">{{ $service->title }}</h2>
 
-                @if($service->price_text)
-                    <div class="mt-1">{{ $service->price_text }}</div>
-                @endif
+                        @if($service->price_text)
+                            <p class="mt-2 text-sm font-medium text-slate-600">{{ $service->price_text }}</p>
+                        @endif
 
-                @if($service->description)
-                    <p class="mt-2 whitespace-pre-line">{{ $service->description }}</p>
-                @endif
-            </div>
-        @empty
-            <p>No services published yet.</p>
-        @endforelse
-    </div>
+                        @if($service->description)
+                            <p class="mt-4 text-slate-600 whitespace-pre-line">{{ $service->description }}</p>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <p class="text-slate-500">No services published yet.</p>
+            @endforelse
+        </div>
+    </section>
 @endsection

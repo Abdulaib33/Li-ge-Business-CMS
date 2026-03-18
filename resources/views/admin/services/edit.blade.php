@@ -8,6 +8,6 @@
         @method('PUT')
         @include('admin.services.partials.form', ['service' => $service])
         <button class="border px-4 py-2" type="submit">Save</button>
-        <a class="underline ml-3" href="{{ route('admin.services.index') }}">Back</a>
+        <a class="underline ml-3 btn-secondary" href="{{ route('admin.services.index') }}">Back</a>
     </form>
 @endsection

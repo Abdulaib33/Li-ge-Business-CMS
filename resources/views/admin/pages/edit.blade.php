@@ -42,7 +42,7 @@
 
         <div class="flex gap-3">
             <button class="border px-4 py-2" type="submit">Save</button>
-            <a class="underline" href="{{ route('admin.pages.index') }}">Back</a>
+            <a class="underline btn-secondary" href="{{ route('admin.pages.index') }}">Back</a>
         </div>
     </form>
 @endsection
