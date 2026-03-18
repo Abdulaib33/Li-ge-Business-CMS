@@ -43,7 +43,7 @@
             @if($settings['logo_path'])
                 <div class="mt-3">
                     <div class="text-sm">Current logo:</div>
-                    <img class="mt-2 max-w-xs border" src="{{ Storage::url($settings['logo_path']) }}" alt="Logo">
+                        <img class="mt-2 max-w-xs border" src="{{ Storage::disk('r2')->url($settings['logo_path']) }}" alt="Logo">
                 </div>
             @endif
         </div>
