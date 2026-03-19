@@ -7,32 +7,74 @@
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-UI-38B2AC)
 ![Status](https://img.shields.io/badge/Status-Portfolio%20Project-success)
 
-A business-oriented content management system built with Laravel.  
-It includes an admin dashboard for managing pages, services, blog posts, contact messages, and site settings.
+A production-ready business content management system built with Laravel.
 
-## Live Demo
+It allows administrators to manage pages, services, blog posts, contact messages, and business settings through a clean dashboard.
 
-- Demo: `Coming soon`
-- Admin: `Coming soon`
+This project simulates a real-world CMS used by small businesses.
 
-## Demo Credentials
+***
+
+## 🚀 Live Demo
+
+- 🌐 Demo: `https://li-ge-business-cms-production.up.railway.app`
+- 🔐 Admin: `https://li-ge-business-cms-production.up.railway.app/admin` 
+⚠️ Note: This is a demo environment. Uploaded images may be reset periodically.
+
+***
+
+## 🔐 Demo Credentials
 - Email: admin@example.com
 - Password: password
 
-## Features
+***
 
-- Admin dashboard
-- Authentication and admin-only access
-- Page management
-- Services CRUD
-- Blog posts CRUD
-- Contact form with stored messages
-- Business settings management
-- Image upload for logo and post covers
-- SEO fields for pages and posts
-- Email notification for contact messages
+# ✨ Features
 
-## Screenshots
+## **Admin Dashboard**
+- Secure authentication  
+- Admin-only access  
+- Clean dashboard overview  
+
+## **Content Management**
+- Pages with slug-based routing  
+- Services CRUD  
+- Blog posts CRUD  
+- Publishing system  
+
+## **Media & Storage**
+- Image uploads for logo and posts  
+- Cloud storage using Cloudflare R2  
+
+## **Contact System**
+- Contact form  
+- Messages stored in database  
+- Email notification support  
+
+## **Settings System**
+- Business information management  
+- Logo upload  
+- Dynamic content configuration  
+
+## **SEO**
+- SEO fields for pages and posts  
+___
+
+
+## 🧠 Technical Highlights
+
+- **Built using Laravel MVC architecture**
+- **Separation between admin and public areas**
+- **Cloud storage integration (Cloudflare R2)**
+- **Form validation and error handling**
+- **Reusable Blade components**
+- **Clean database structure with migrations**
+- **Scalable content management approach**
+
+---
+
+
+## 🖼️ Screenshots
 
 ### Admin Dashboard
 ![Dashboard](./screenshots/admin/dashboard.png)
@@ -59,6 +101,10 @@ It includes an admin dashboard for managing pages, services, blog posts, contact
 **Database**
 - MySQL
 
+**Infrastructure**
+- Railway (deployment)
+- Cloudflare R2 (object storage)
+
 **Tools**
 - Git
 - GitHub
@@ -74,3 +120,14 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
+
+Configure .env, then:
+
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
+
+
+## 👤 Author
+Laravel backend developer focused on building real-world web applications, admin systems, and scalable business tools.
