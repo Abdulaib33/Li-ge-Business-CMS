@@ -17,9 +17,10 @@ This project simulates a real-world CMS used by small businesses.
 
 ## 🚀 Live Demo
 
-- 🌐 Demo: `https://li-ge-business-cms-production.up.railway.app`
-- 🔐 Admin: `https://li-ge-business-cms-production.up.railway.app/admin` 
-⚠️ Note: This is a demo environment. Uploaded images may be reset periodically.
+- 🌐 Demo: [https://li-ge-business-cms-production.up.railway.app](https://li-ge-business-cms-production.up.railway.app)
+- 🔐 Admin: [https://li-ge-business-cms-production.up.railway.app/admin](https://li-ge-business-cms-production.up.railway.app/admin)
+
+⚠️ **Note:** This is a demo environment. Uploaded images may be reset periodically.
 
 ***
 
