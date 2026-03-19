@@ -86,7 +86,7 @@ ___
 ![Create Post](./screenshots/admin/post-create.png)
 
 ### Public Services Page
-![Services](./screenshots/admin/services.png)
+![Services](./screenshots/public/services.png)
 
 ## Tech Stack
 
