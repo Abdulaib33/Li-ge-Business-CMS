@@ -9,31 +9,31 @@
 
         <div>
             <label class="block font-medium">Title</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="title" value="{{ old('title', $page->title) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="title" value="{{ old('title', $page->title) }}">
             @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Body</label>
-            <textarea class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="10" name="body">{{ old('body', $page->body) }}</textarea>
+            <textarea class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="10" name="body">{{ old('body', $page->body) }}</textarea>
             @error('body') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Meta title</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_title" value="{{ old('meta_title', $page->meta_title) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_title" value="{{ old('meta_title', $page->meta_title) }}">
             @error('meta_title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Meta description (max 160)</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_description" value="{{ old('meta_description', $page->meta_description) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_description" value="{{ old('meta_description', $page->meta_description) }}">
             @error('meta_description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Published</label>
-            <select class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
+            <select class="border p-2 rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
                 <option value="1" @selected(old('is_published', (int)$page->is_published) === 1)>Yes</option>
                 <option value="0" @selected(old('is_published', (int)$page->is_published) === 0)>No</option>
             </select>
@@ -41,7 +41,7 @@
         </div>
 
         <div class="flex gap-3">
-            <button class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="submit">Save</button>
+            <button class="border px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition shadow" type="submit">Save</button>
             <a class="underline btn-secondary" href="{{ route('admin.pages.index') }}">Back</a>
         </div>
     </form>

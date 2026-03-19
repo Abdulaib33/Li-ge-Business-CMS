@@ -7,7 +7,7 @@
         @csrf
         @method('PUT')
         @include('admin.posts.partials.form', ['post' => $post])
-        <button class="border px-4 py-2" type="submit">Save</button>
+        <button class="border px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition shadow" type="submit">Save</button>
         <a class="underline ml-3 btn-secondary" href="{{ route('admin.posts.index') }}">Back</a>
     </form>
 @endsection

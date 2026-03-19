@@ -13,25 +13,25 @@
 
         <div>
             <label class="block font-medium">Business name</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="business_name" value="{{ old('business_name', $settings['business_name']) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="business_name" value="{{ old('business_name', $settings['business_name']) }}">
             @error('business_name') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Phone</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="phone" value="{{ old('phone', $settings['phone']) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="phone" value="{{ old('phone', $settings['phone']) }}">
             @error('phone') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Email</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="email" name="email" value="{{ old('email', $settings['email']) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="email" name="email" value="{{ old('email', $settings['email']) }}">
             @error('email') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
         <div>
             <label class="block font-medium">Address</label>
-            <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="address" value="{{ old('address', $settings['address']) }}">
+            <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="address" value="{{ old('address', $settings['address']) }}">
             @error('address') <div class="text-sm mt-1">{{ $message }}</div> @enderror
         </div>
 
@@ -48,6 +48,6 @@
             @endif
         </div>
 
-        <button class="border px-4 py-2" type="submit">Save</button>
+        <button class="border px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition shadow" type="submit">Save</button>
     </form>
 @endsection
