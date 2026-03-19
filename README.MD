@@ -35,16 +35,16 @@ It includes an admin dashboard for managing pages, services, blog posts, contact
 ## Screenshots
 
 ### Admin Dashboard
-![Dashboard](./screenshots/dashboard.png)
+![Dashboard](./screenshots/admin/dashboard.png)
 
 ### Posts Management
-![Posts](./screenshots/posts.png)
+![Posts](./screenshots/admin/posts.png)
 
 ### Create/Edit Post
-![Create Post](./screenshots/create-post.png)
+![Create Post](./screenshots/admin/post-create.png)
 
 ### Public Services Page
-![Services](./screenshots/services.png)
+![Services](./screenshots/admin/services.png)
 
 ## Tech Stack
 
