@@ -131,6 +131,7 @@ npm run build
 php artisan serve
 ```
 
+*** 
 
 ## 👤 Author
 Laravel backend developer focused on building real-world web applications, admin systems, and scalable business tools.
