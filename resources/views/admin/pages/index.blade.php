@@ -11,8 +11,8 @@
         </div>
     @endif
 
-    <div class="mt-6 border rounded">
-        <table class="w-full">
+    <div class="mt-6 border rounded overflow-hidden">
+        <table class="w-full table">
             <thead class="border-b">
                 <tr>
                     <th class="text-left p-3">Key</th>

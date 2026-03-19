@@ -14,7 +14,7 @@
                     <th class="text-left p-3">Date</th>
                     <th class="text-left p-3">Name</th>
                     <th class="text-left p-3">Email</th>
-                    <th class="text-left p-3"></th>
+                    <th class="text-left p-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -30,7 +30,7 @@
                                   onsubmit="return confirm('Delete this message?');">
                                 @csrf
                                 @method('DELETE')
-                                <button class="underline" type="submit">Delete</button>
+                                <button class="underline btn-danger" type="submit">Delete</button>
                             </form>
                         </td>
                     </tr>

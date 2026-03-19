@@ -8,13 +8,13 @@
 
 <div>
     <label class="block font-medium label">Title</label>
-    <input class="border p-2 w-full" name="title" value="{{ $title }}">
+    <input class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="title" value="{{ $title }}">
     @error('title') <div class="text-sm mt-1 error-text">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium label">Description</label>
-    <textarea class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="6" name="description">{{ $description }}</textarea>
+    <textarea class="border p-2 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="6" name="description">{{ $description }}</textarea>
     @error('description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 

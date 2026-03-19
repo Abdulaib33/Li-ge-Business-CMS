@@ -38,6 +38,10 @@ class DatabaseSeeder extends Seeder
                 PageSeeder::class,
                 AdminUserSeeder::class,
                // GuestUserSeeder::class
+                ServiceSeeder::class,
+                PostSeeder::class,
+                ContactMessageSeeder::class,
+                SettingSeeder::class,
             ]
         );
 

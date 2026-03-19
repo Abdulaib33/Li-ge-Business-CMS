@@ -3,7 +3,7 @@
 @section('content')
     <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold section-title">Posts</h1>
-        <a class="border px-4 py-2 btn-primary" href="{{ route('admin.posts.create') }}">New</a>
+        <a class="border px-4 py-2 btn-primary bg-blue-700" href="{{ route('admin.posts.create') }}">New</a>
     </div>
 
     @if(session('status'))
@@ -11,7 +11,7 @@
     @endif
 
     <div class="mt-6 border rounded overflow-hidden">
-        <table class="w-full">
+        <table class="w-full table">
             <thead class="border-b">
                 <tr>
                     <th class="text-left p-3">Title</th>
