@@ -61,7 +61,7 @@
 
 <div>
     <label class="block font-medium">Published</label>
-    <select class="border p-2 rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
+    <select class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
         <option value="1" @selected((int)$is_published === 1)>Yes</option>
         <option value="0" @selected((int)$is_published === 0)>No</option>
     </select>
