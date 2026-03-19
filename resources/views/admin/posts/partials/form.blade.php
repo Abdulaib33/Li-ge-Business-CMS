@@ -11,26 +11,26 @@
 
 <div>
     <label class="block font-medium">Title</label>
-    <input class="border p-2 w-full" name="title" value="{{ $title }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="title" value="{{ $title }}">
     @error('title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Slug (optional)</label>
-    <input class="border p-2 w-full" name="slug" value="{{ $slug }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="slug" value="{{ $slug }}">
     <div class="text-sm mt-1">Leave empty to auto-generate from the title.</div>
     @error('slug') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Excerpt</label>
-    <textarea class="border p-2 w-full" rows="3" name="excerpt">{{ $excerpt }}</textarea>
+    <textarea class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="3" name="excerpt">{{ $excerpt }}</textarea>
     @error('excerpt') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Body</label>
-    <textarea class="border p-2 w-full" rows="10" name="body">{{ $body }}</textarea>
+    <textarea class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="10" name="body">{{ $body }}</textarea>
     @error('body') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
@@ -49,19 +49,19 @@
 
 <div>
     <label class="block font-medium">Meta title</label>
-    <input class="border p-2 w-full" name="meta_title" value="{{ $meta_title }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_title" value="{{ $meta_title }}">
     @error('meta_title') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Meta description (max 160)</label>
-    <input class="border p-2 w-full" name="meta_description" value="{{ $meta_description }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="meta_description" value="{{ $meta_description }}">
     @error('meta_description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Published</label>
-    <select class="border p-2" name="is_published">
+    <select class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
         <option value="1" @selected((int)$is_published === 1)>Yes</option>
         <option value="0" @selected((int)$is_published === 0)>No</option>
     </select>
@@ -70,7 +70,7 @@
 
 <div>
     <label class="block font-medium">Publish date/time (optional)</label>
-    <input class="border p-2" type="datetime-local" name="published_at" value="{{ $published_at }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="datetime-local" name="published_at" value="{{ $published_at }}">
     <div class="text-sm mt-1">If empty, and Published=Yes, it can show immediately (depending on your model logic).</div>
     @error('published_at') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>

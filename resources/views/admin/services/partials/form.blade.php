@@ -14,25 +14,25 @@
 
 <div>
     <label class="block font-medium label">Description</label>
-    <textarea class="border p-2 w-full textarea" rows="6" name="description">{{ $description }}</textarea>
+    <textarea class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="6" name="description">{{ $description }}</textarea>
     @error('description') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Price text (optional)</label>
-    <input class="border p-2 w-full" name="price_text" value="{{ $price_text }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="price_text" value="{{ $price_text }}">
     @error('price_text') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Sort order</label>
-    <input class="border p-2 w-full" type="number" name="sort_order" value="{{ $sort_order }}">
+    <input class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" type="number" name="sort_order" value="{{ $sort_order }}">
     @error('sort_order') <div class="text-sm mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
     <label class="block font-medium">Published</label>
-    <select class="border p-2" name="is_published">
+    <select class="rounded-lg border-gray-300 dark:border-gray-700 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" name="is_published">
         <option value="1" @selected((int)$is_published === 1)>Yes</option>
         <option value="0" @selected((int)$is_published === 0)>No</option>
     </select>

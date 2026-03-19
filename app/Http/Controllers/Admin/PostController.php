@@ -42,7 +42,7 @@ class PostController extends Controller
 
         // Image upload
         if ($request->hasFile('cover_image')) {
-            $data['cover_image_path'] = $request->file('cover_image')->store('posts', 'public');
+            $data['cover_image_path'] = $request->file('cover_image')->store('posts', 'r2');
         }
 
         Post::create($data);
