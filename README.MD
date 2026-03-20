@@ -94,7 +94,7 @@ ___
 
 ***
 
-## Tech Stack
+# 🚀 Tech Stack
 
 **Backend**
 - PHP
