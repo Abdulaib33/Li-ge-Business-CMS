@@ -26,6 +26,7 @@ This project simulates a real-world CMS used by small businesses.
 
 ## 🔐 Demo Credentials
 
+### 🛠️ Admin
 - **Email:** admin@example.com  
 - **Password:** password
 
